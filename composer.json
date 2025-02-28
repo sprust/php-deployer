@@ -1,0 +1,19 @@
+{
+    "name": "sprust/php-deployer",
+    "type": "project",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "PhpDeployer\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "sprust"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "symfony/process": "^7.2"
+    }
+}
