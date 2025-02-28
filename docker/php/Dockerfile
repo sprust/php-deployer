@@ -11,6 +11,8 @@ RUN chown -R www-data:www-data /app
 RUN curl -sS https://getcomposer.org/installer  \
     | php -- --install-dir=/usr/local/bin --filename=composer
 
+RUN ssh-keygen -t rsa -q -f "$HOME/.ssh/id_rsa" -N ""
+
 # Container user & group
 ARG USER_ID
 ARG GROUP_ID
