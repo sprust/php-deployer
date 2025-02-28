@@ -12,6 +12,8 @@ class Logger
     private const YELLOW = "\033[33m";
     private const BLUE   = "\033[34m";
 
+    private bool $wereMessages = false;
+
     /**
      * @var string[]
      */
@@ -70,7 +72,9 @@ class Logger
             file_put_contents($logFilePath, $logMessage . "\n", FILE_APPEND);
         }
 
-        print  "\n" . $prefix . $logMessage . self::RESET;
+        print ($this->wereMessages ? "\n" : '') . $prefix . $logMessage . self::RESET;
+
+        $this->wereMessages = true;
     }
 
     private function makeDateTime(): string

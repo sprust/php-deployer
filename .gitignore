@@ -3,5 +3,10 @@
 
 /logs/*.log
 /build/build_*
+/share/!.gitkeep
+/share/links/!.gitkeep
+/share/links/*
+/share/scripts/!.gitkeep
+/share/scripts/*
 
 /vendor/

@@ -36,12 +36,10 @@ readonly class DeployCommand
         } catch (RuntimeException $e) {
             $this->logger->error($e->getMessage());
 
-            $this->logger->popLogFile();
-
             return ExitStatusCodeEnum::ERROR;
+        } finally {
+            $this->logger->popLogFile();
         }
-
-        $this->logger->popLogFile();
 
         return ExitStatusCodeEnum::SUCCESS;
     }
@@ -56,6 +54,14 @@ readonly class DeployCommand
         $this->logger->info("Build directory name: {$this->buildExecutor->getBuildDirName()}");
 
         $this->buildExecutor->clone($this->repository, $this->branch);
+
+        $this->buildExecutor->generateShareSymlinks();
+
+        $this->buildExecutor->runScripts();
+
+        $this->buildExecutor->replaceActiveLink();
+
+        $this->logger->info('**** Application has been deployed ****');
     }
 
     private function maskRepository(): string

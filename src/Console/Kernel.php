@@ -43,8 +43,9 @@ readonly class Kernel
                 repository: $env['REPOSITORY'] ?? '',
                 branch: $env['BRANCH'] ?? '',
                 buildExecutor: new BuildExecutor(
-                    $this->logger,
-                    $this->baseDir . '/build',
+                    shareLinksDirPath: $this->baseDir . '/share/links',
+                    logger: $this->logger,
+                    buildDirPath: $this->baseDir . '/build',
                 )
             );
 

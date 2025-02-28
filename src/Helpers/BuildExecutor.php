@@ -3,6 +3,9 @@
 namespace PhpDeployer\Helpers;
 
 use DateTime;
+use FilesystemIterator;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
 use RuntimeException;
 use Symfony\Component\Process\Process;
 
@@ -13,6 +16,7 @@ class BuildExecutor
     private string $releaseAppDirPath = '';
 
     public function __construct(
+        private readonly string $shareLinksDirPath,
         private readonly Logger $logger,
         private readonly string $buildDirPath
     ) {
@@ -41,6 +45,46 @@ class BuildExecutor
     public function clone(string $repository, string $branch): void
     {
         $this->exec("git clone --branch $branch $repository .");
+    }
+
+    public function generateShareSymlinks(): void
+    {
+        $this->logger->warn('Generating share symlinks...');
+
+        $paths = $this->getFileAndDirPathsRecursive($this->shareLinksDirPath);
+
+        foreach ($paths as $path) {
+            $source = "$this->shareLinksDirPath/$path";
+            $target = "$this->releaseAppDirPath/$path";
+
+            if (file_exists($target)) {
+                $this->logger->warn("The target path already exists: $target");
+
+                if (is_dir($target)) {
+                    $this->logger->warn("Removing the directory: $target");
+
+                    $this->deleteDirRecursive($target);
+                } else {
+                    $this->logger->warn("Removing the file: $target");
+
+                    unlink($target);
+                }
+            }
+
+            $this->logger->info("$source -> $target");
+
+            $this->exec("ln -s $source $target");
+        }
+    }
+
+    public function runScripts(): void
+    {
+        // TODO
+    }
+
+    public function replaceActiveLink(): void
+    {
+        // TODO
     }
 
     private function exec(string $command): void
@@ -73,10 +117,61 @@ class BuildExecutor
         }
 
         if ($errorOutput = trim($process->getErrorOutput())) {
-            $this->logger->error($errorOutput);
+            $this->logger->warn($errorOutput);
         }
 
         $process->clearOutput();
         $process->clearErrorOutput();
+    }
+
+    private function getFileAndDirPathsRecursive(string $linksDirPath): array
+    {
+        if (!is_dir($linksDirPath)) {
+            throw new RuntimeException("The provided path is not a directory");
+        }
+
+        $linksDirPathLen = strlen($linksDirPath);
+
+        $result = [];
+
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($linksDirPath, FilesystemIterator::SKIP_DOTS),
+            RecursiveIteratorIterator::SELF_FIRST
+        );
+
+        foreach ($iterator as $item) {
+            if ($item->getFileName() === '.gitkeep') {
+                continue;
+            }
+
+            if (!$item->isFile()
+                && iterator_count(new FilesystemIterator($item->getPathname())) !== 0
+            ) {
+                continue;
+            }
+
+            $result[] = substr($item->getPathname(), $linksDirPathLen + 1);
+        }
+
+        return $result;
+    }
+
+    private function deleteDirRecursive(string $dir): void
+    {
+        if (!is_dir($dir)) {
+            throw new RuntimeException("The provided path is not a directory");
+        }
+
+        $items = new FilesystemIterator($dir, FilesystemIterator::SKIP_DOTS);
+
+        foreach ($items as $item) {
+            if ($item->isDir()) {
+                $this->deleteDirRecursive($item->getPathname());
+            } else {
+                unlink($item->getPathname());
+            }
+        }
+
+        rmdir($dir);
     }
 }
