@@ -17,6 +17,8 @@ class BuildExecutor
 
     public function __construct(
         private readonly string $shareLinksDirPath,
+        private readonly string $shareScriptsDirPath,
+        private readonly string $afterCloneScriptFileName,
         private readonly Logger $logger,
         private readonly string $buildDirPath
     ) {
@@ -77,9 +79,17 @@ class BuildExecutor
         }
     }
 
-    public function runScripts(): void
+    public function runAfterCloneScripts(): void
     {
-        // TODO
+        if (!$this->afterCloneScriptFileName) {
+            $this->logger->warn('After clone script is not provided');
+
+            return;
+        }
+
+        $this->logger->warn('Running after clone scripts...');
+
+        $this->exec("sh $this->shareScriptsDirPath/$this->afterCloneScriptFileName");
     }
 
     public function replaceActiveLink(): void

@@ -44,6 +44,8 @@ readonly class Kernel
                 branch: $env['BRANCH'] ?? '',
                 buildExecutor: new BuildExecutor(
                     shareLinksDirPath: $this->baseDir . '/share/links',
+                    shareScriptsDirPath: $this->baseDir . '/share/scripts',
+                    afterCloneScriptFileName: $env['SCRIPT_NAME_AFTER_CLONE'] ?? '',
                     logger: $this->logger,
                     buildDirPath: $this->baseDir . '/build',
                 )

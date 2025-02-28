@@ -57,7 +57,7 @@ readonly class DeployCommand
 
         $this->buildExecutor->generateShareSymlinks();
 
-        $this->buildExecutor->runScripts();
+        $this->buildExecutor->runAfterCloneScripts();
 
         $this->buildExecutor->replaceActiveLink();
 
