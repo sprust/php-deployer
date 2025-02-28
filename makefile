@@ -8,6 +8,9 @@ endif
 env-copy:
 	cp -i .env.example .env
 
+ssh-generate:
+	docker-compose run --rm $(PHP_SERVICE) ssh-keygen
+
 ssh-pub-key:
 	docker-compose run --rm $(PHP_SERVICE) cat /root/.ssh/id_rsa.pub
 
@@ -19,3 +22,6 @@ test-clone:
 
 bash:
 	docker-compose run --rm $(PHP_SERVICE) bash
+
+deploy:
+	docker-compose run --rm $(PHP_SERVICE) ./deployer deploy

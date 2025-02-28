@@ -10,3 +10,4 @@ services:
     working_dir: /app
     volumes:
       - ./:/app
+      - ./docker/php/ssh_config:/root/.ssh/config
