@@ -11,6 +11,8 @@ use Symfony\Component\Process\Process;
 
 class BuildExecutor
 {
+    private bool $inited = false;
+
     private string $releaseDirPath = '';
     private string $buildDirName = '';
     private string $releaseAppDirPath = '';
@@ -44,16 +46,31 @@ class BuildExecutor
 
         mkdir($this->releaseDirPath);
         mkdir($this->releaseAppDirPath);
+
+        $this->inited = true;
     }
 
-    public function clone(string $repository, string $branch): void
+    public function build(string $repository, string $branch): void
+    {
+        if (!$this->inited) {
+            throw new RuntimeException('The build executor is not initialized');
+        }
+
+        $this->clone($repository, $branch);
+        $this->generateShareSymlinks();
+        $this->runAfterCloneScript();
+        $this->replaceActiveLink();
+        $this->runAfterSwitchActiveSymlinkScript();
+    }
+
+    private function clone(string $repository, string $branch): void
     {
         $this->logger->alert('Cloning repository...');
 
         $this->exec("git clone --branch $branch $repository .");
     }
 
-    public function generateShareSymlinks(): void
+    private function generateShareSymlinks(): void
     {
         $this->logger->alert('Generating share symlinks...');
 
@@ -81,7 +98,7 @@ class BuildExecutor
         }
     }
 
-    public function runAfterCloneScript(): void
+    private function runAfterCloneScript(): void
     {
         $this->logger->alert('Running after clone scripts...');
 
@@ -98,12 +115,12 @@ class BuildExecutor
         $this->exec("sh $this->shareScriptsDirPath/$this->afterCloneScriptFileName");
     }
 
-    public function replaceActiveLink(): void
+    private function replaceActiveLink(): void
     {
         $this->createSymlink($this->releaseAppDirPath, $this->activeBuildLinkFullPath);
     }
 
-    public function runAfterSwitchActiveSymlinkScript(): void
+    private function runAfterSwitchActiveSymlinkScript(): void
     {
         $this->logger->alert('Running after switch active symlink scripts...');
 

@@ -52,11 +52,7 @@ readonly class DeployCommand
         $this->logger->info("branch: $this->branch");
         $this->logger->info("Build directory name: {$this->buildExecutor->getBuildDirName()}");
 
-        $this->buildExecutor->clone($this->repository, $this->branch);
-        $this->buildExecutor->generateShareSymlinks();
-        $this->buildExecutor->runAfterCloneScript();
-        $this->buildExecutor->replaceActiveLink();
-        $this->buildExecutor->runAfterSwitchActiveSymlinkScript();
+        $this->buildExecutor->build($this->repository, $this->branch);
 
         $this->logger->alert('Application has been deployed');
     }
