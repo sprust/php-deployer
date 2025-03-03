@@ -26,6 +26,17 @@ class BuildExecutor
         private readonly Logger $logger,
         private readonly string $buildDirPath
     ) {
+        if (!is_dir($this->shareLinksDirPath)) {
+            throw new RuntimeException('The share links directory is not found');
+        }
+
+        if (!is_dir($this->shareScriptsDirPath)) {
+            throw new RuntimeException('The share scripts directory is not found');
+        }
+
+        if (!is_dir($this->buildDirPath)) {
+            throw new RuntimeException('The build directory is not found');
+        }
     }
 
     public function getBuildDirName(): string
