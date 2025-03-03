@@ -19,6 +19,8 @@ class BuildExecutor
         private readonly string $shareLinksDirPath,
         private readonly string $shareScriptsDirPath,
         private readonly string $afterCloneScriptFileName,
+        private readonly string $afterSwitchActiveSymlinkFileName,
+        private readonly string $activeBuildLinkFullPath,
         private readonly Logger $logger,
         private readonly string $buildDirPath
     ) {
@@ -46,12 +48,14 @@ class BuildExecutor
 
     public function clone(string $repository, string $branch): void
     {
+        $this->logger->alert('Cloning repository...');
+
         $this->exec("git clone --branch $branch $repository .");
     }
 
     public function generateShareSymlinks(): void
     {
-        $this->logger->warn('Generating share symlinks...');
+        $this->logger->alert('Generating share symlinks...');
 
         $paths = $this->getFileAndDirPathsRecursive($this->shareLinksDirPath);
 
@@ -73,28 +77,47 @@ class BuildExecutor
                 }
             }
 
-            $this->logger->info("$source -> $target");
-
-            $this->exec("ln -s $source $target");
+            $this->createSymlink($source, $target);
         }
     }
 
-    public function runAfterCloneScripts(): void
+    public function runAfterCloneScript(): void
     {
+        $this->logger->alert('Running after clone scripts...');
+
         if (!$this->afterCloneScriptFileName) {
             $this->logger->warn('After clone script is not provided');
 
             return;
         }
 
-        $this->logger->warn('Running after clone scripts...');
+        $scriptPath = $this->shareScriptsDirPath . '/' . $this->afterCloneScriptFileName;
+
+        $this->logger->info("Path [$scriptPath]");
 
         $this->exec("sh $this->shareScriptsDirPath/$this->afterCloneScriptFileName");
     }
 
     public function replaceActiveLink(): void
     {
-        // TODO
+        $this->createSymlink($this->releaseAppDirPath, $this->activeBuildLinkFullPath);
+    }
+
+    public function runAfterSwitchActiveSymlinkScript(): void
+    {
+        $this->logger->alert('Running after switch active symlink scripts...');
+
+        if (!$this->afterSwitchActiveSymlinkFileName) {
+            $this->logger->warn('After switch active symlink script is not provided');
+
+            return;
+        }
+
+        $scriptPath = $this->shareScriptsDirPath . '/' . $this->afterSwitchActiveSymlinkFileName;
+
+        $this->logger->info("Path [$scriptPath]");
+
+        $this->exec("sh $scriptPath");
     }
 
     private function exec(string $command): void
@@ -116,18 +139,24 @@ class BuildExecutor
         if (!$process->isSuccessful()) {
             throw new RuntimeException('Command failed');
         }
+        $this->logger->info('--> command executed successfully');
+    }
 
-        $this->logger->info('Command executed successfully');
+    private function createSymlink(string $source, string $target): void
+    {
+        $this->logger->info("Creating symlink: $source -> $target");
+
+        $this->exec("ln -sfn $source $target");
     }
 
     private function logProcess(Process $process): void
     {
         if ($output = trim($process->getOutput())) {
-            $this->logger->info($output);
+            $this->logger->proc($output);
         }
 
         if ($errorOutput = trim($process->getErrorOutput())) {
-            $this->logger->warn($errorOutput);
+            $this->logger->proc($errorOutput);
         }
 
         $process->clearOutput();

@@ -46,6 +46,8 @@ readonly class Kernel
                     shareLinksDirPath: $this->baseDir . '/share/links',
                     shareScriptsDirPath: $this->baseDir . '/share/scripts',
                     afterCloneScriptFileName: $env['SCRIPT_NAME_AFTER_CLONE'] ?? '',
+                    afterSwitchActiveSymlinkFileName: $env['SCRIPT_NAME_AFTER_SWITCH_ACTIVE_SYMLINK'] ?? '',
+                    activeBuildLinkFullPath: $this->baseDir . '/build/active_build',
                     logger: $this->logger,
                     buildDirPath: $this->baseDir . '/build',
                 )

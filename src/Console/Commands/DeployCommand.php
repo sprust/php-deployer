@@ -46,22 +46,19 @@ readonly class DeployCommand
 
     private function onHandle(): void
     {
-        $this->logger->warn('Deploying application...');
+        $this->logger->alert('Deploying application...');
 
         $this->logger->info('repository: ' . $this->maskRepository());
         $this->logger->info("branch: $this->branch");
-
         $this->logger->info("Build directory name: {$this->buildExecutor->getBuildDirName()}");
 
         $this->buildExecutor->clone($this->repository, $this->branch);
-
         $this->buildExecutor->generateShareSymlinks();
-
-        $this->buildExecutor->runAfterCloneScripts();
-
+        $this->buildExecutor->runAfterCloneScript();
         $this->buildExecutor->replaceActiveLink();
+        $this->buildExecutor->runAfterSwitchActiveSymlinkScript();
 
-        $this->logger->info('**** Application has been deployed ****');
+        $this->logger->alert('Application has been deployed');
     }
 
     private function maskRepository(): string

@@ -44,9 +44,27 @@ class Logger
         $this->writeLn(self::GREEN, __FUNCTION__, $this->prepareMessage($message));
     }
 
+    public function proc(mixed $message): void
+    {
+        $this->writeLn(self::BLUE, __FUNCTION__, PHP_EOL . $this->prepareMessage($message));
+    }
+
     public function warn(mixed $message): void
     {
         $this->writeLn(self::YELLOW, __FUNCTION__, $this->prepareMessage($message));
+    }
+
+    public function alert(mixed $message): void
+    {
+        $wrap = '****************************************';
+
+        $this->writeLn(
+            prefix: self::YELLOW,
+            level: __FUNCTION__,
+            message: PHP_EOL . $wrap . PHP_EOL .
+            $this->prepareMessage($message) . PHP_EOL .
+            $wrap
+        );
     }
 
     public function error(mixed $message): void
