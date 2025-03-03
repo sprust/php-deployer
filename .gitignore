@@ -2,7 +2,8 @@
 .env
 
 /logs/*.log
-/build/build_*
+/build/!.gitkeep
+/build/*
 /share/!.gitkeep
 /share/links/!.gitkeep
 /share/links/*

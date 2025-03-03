@@ -21,7 +21,17 @@ class Logger
 
     public function putLogFilePath(string $logFilePath): void
     {
-        $this->logFilePaths[] = $logFilePath;
+        $day = $this->makeDateDay();
+
+        $pathInfo = pathinfo($logFilePath);
+
+        $this->logFilePaths[] = sprintf(
+            '%s/%s_%s.%s',
+            $pathInfo['dirname'],
+            $pathInfo['filename'],
+            $day,
+            $pathInfo['extension']
+        );
     }
 
     public function popLogFile(): ?string
@@ -75,6 +85,11 @@ class Logger
         print ($this->wereMessages ? "\n" : '') . $prefix . $logMessage . self::RESET;
 
         $this->wereMessages = true;
+    }
+
+    private function makeDateDay(): string
+    {
+        return (new DateTime())->format('Y-m-d');
     }
 
     private function makeDateTime(): string
