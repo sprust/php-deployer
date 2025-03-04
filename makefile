@@ -12,5 +12,8 @@ test-clone:
 		&& cd releases/release_clone_test \
 		&& git clone --branch $(BRANCH) $(REPOSITORY) .
 
+test:
+	php deployer test
+
 deploy:
 	php deployer deploy

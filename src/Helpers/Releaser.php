@@ -20,6 +20,7 @@ class Releaser
     private string $afterSwitchActiveReleaseScriptPath = '';
 
     public function __construct(
+        private readonly bool $isTest,
         private readonly string $shareLinkableDirPath,
         private readonly string $shareScriptsDirPath,
         string $afterCloneScriptFileName,
@@ -71,7 +72,13 @@ class Releaser
 
     public function init(): void
     {
-        $this->releaseDirName    = 'release_' . (new DateTime())->format('Ymd_His') . '_' . uniqid();
+        $this->releaseDirName = sprintf(
+            'release_%s%s_%s',
+            $this->isTest ? 'test_' : '',
+            (new DateTime())->format('Ymd_His'),
+            uniqid()
+        );
+
         $this->releaseDirPath    = rtrim($this->releasesDirPath, '/') . '/' . $this->releaseDirName;
         $this->releaseAppDirPath = $this->releaseDirPath . '/app';
 
@@ -89,9 +96,12 @@ class Releaser
 
         $this->clone($repository, $branch);
         $this->generateShareSymlinks();
-        $this->runAfterCloneScript();
-        $this->replaceActiveLink();
-        $this->runAfterSwitchActiveSymlinkScript();
+
+        if (!$this->isTest) {
+            $this->runAfterCloneScript();
+            $this->replaceActiveLink();
+            $this->runAfterSwitchActiveSymlinkScript();
+        }
 
         $this->saveState();
     }
@@ -285,9 +295,11 @@ class Releaser
             json_encode($stateData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
         );
 
-        file_put_contents(
-            $this->releasesDirPath . '/current-state.json',
-            json_encode($stateData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
-        );
+        if (!$this->isTest) {
+            file_put_contents(
+                $this->releasesDirPath . '/current-state.json',
+                json_encode($stateData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+            );
+        }
     }
 }
