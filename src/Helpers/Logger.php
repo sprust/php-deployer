@@ -46,7 +46,15 @@ class Logger
 
     public function proc(mixed $message): void
     {
-        $this->writeLn(self::BLUE, __FUNCTION__, PHP_EOL . $this->prepareMessage($message));
+        foreach (explode(PHP_EOL, $message) as $line) {
+            $line = trim($line);
+
+            if (!$line) {
+                continue;
+            }
+
+            $this->writeLn(self::BLUE, __FUNCTION__, $line);
+        }
     }
 
     public function warn(mixed $message): void

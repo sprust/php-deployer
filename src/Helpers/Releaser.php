@@ -141,7 +141,7 @@ class Releaser
             return;
         }
 
-        $this->logger->info("Path [$this->afterCloneScriptPath]");
+        $this->logger->info(file_get_contents($this->afterCloneScriptPath));
 
         $this->exec("sh $this->afterCloneScriptPath");
     }
@@ -161,7 +161,7 @@ class Releaser
             return;
         }
 
-        $this->logger->info("Path [$this->afterSwitchActiveReleaseScriptPath]");
+        $this->logger->info(file_get_contents($this->afterSwitchActiveReleaseScriptPath));
 
         $this->exec("sh $this->afterSwitchActiveReleaseScriptPath");
     }
@@ -185,6 +185,7 @@ class Releaser
         if (!$process->isSuccessful()) {
             throw new RuntimeException('Command failed');
         }
+
         $this->logger->info('--> command executed successfully');
     }
 
