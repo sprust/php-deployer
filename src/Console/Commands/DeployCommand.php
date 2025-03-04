@@ -3,7 +3,7 @@
 namespace PhpDeployer\Console\Commands;
 
 use PhpDeployer\Enum\ExitStatusCodeEnum;
-use PhpDeployer\Helpers\BuildExecutor;
+use PhpDeployer\Helpers\Releaser;
 use PhpDeployer\Helpers\Logger;
 use RuntimeException;
 
@@ -13,7 +13,7 @@ readonly class DeployCommand
         private Logger $logger,
         private string $repository,
         private string $branch,
-        private BuildExecutor $buildExecutor,
+        private Releaser $releaser,
     ) {
         if (!$this->repository) {
             throw new RuntimeException('Repository is not provided');
@@ -25,10 +25,10 @@ readonly class DeployCommand
 
     public function handle(): ExitStatusCodeEnum
     {
-        $this->buildExecutor->init();
+        $this->releaser->init();
 
         $this->logger->putLogFilePath(
-            $this->buildExecutor->getReleaseDirPath() . '/deploy.log'
+            $this->releaser->getReleaseDirPath() . '/deploy.log'
         );
 
         try {
@@ -50,9 +50,9 @@ readonly class DeployCommand
 
         $this->logger->info('repository: ' . $this->maskRepository());
         $this->logger->info("branch: $this->branch");
-        $this->logger->info("Build directory name: {$this->buildExecutor->getBuildDirName()}");
+        $this->logger->info("Release dir name: {$this->releaser->getReleaseDirName()}");
 
-        $this->buildExecutor->build($this->repository, $this->branch);
+        $this->releaser->release($this->repository, $this->branch);
 
         $this->logger->alert('Application has been deployed');
     }

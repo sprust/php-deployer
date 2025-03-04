@@ -1,13 +1,10 @@
 .idea
 .env
 
+!.gitkeep
 /logs/*.log
-/build/!.gitkeep
-/build/*
-/share/!.gitkeep
-/share/links/!.gitkeep
+/releases/*
 /share/links/*
-/share/scripts/!.gitkeep
 /share/scripts/*
 
 /vendor/

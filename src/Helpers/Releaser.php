@@ -9,24 +9,24 @@ use RecursiveIteratorIterator;
 use RuntimeException;
 use Symfony\Component\Process\Process;
 
-class BuildExecutor
+class Releaser
 {
     private bool $inited = false;
 
     private string $releaseDirPath = '';
-    private string $buildDirName = '';
+    private string $releaseDirName = '';
     private string $releaseAppDirPath = '';
-    private string $afterCloneScriptFilePath = '';
-    private string $afterSwitchActiveSymlinkFilePath = '';
+    private string $afterCloneScriptPath = '';
+    private string $afterSwitchActiveReleaseScriptPath = '';
 
     public function __construct(
         private readonly string $shareLinksDirPath,
         private readonly string $shareScriptsDirPath,
         string $afterCloneScriptFileName,
-        string $afterSwitchActiveSymlinkFileName,
-        private readonly string $activeBuildLinkFullPath,
+        string $afterSwitchActiveReleaseFileName,
+        private readonly string $activeReleaseLinkPath,
         private readonly Logger $logger,
-        private readonly string $buildDirPath
+        private readonly string $releasesDirPath
     ) {
         if (!is_dir($this->shareLinksDirPath)) {
             throw new RuntimeException('The share links directory is not found');
@@ -36,32 +36,32 @@ class BuildExecutor
             throw new RuntimeException('The share scripts directory is not found');
         }
 
-        if (!is_dir($this->buildDirPath)) {
-            throw new RuntimeException('The build directory is not found');
+        if (!is_dir($this->releasesDirPath)) {
+            throw new RuntimeException('The releases directory is not found');
         }
 
         if ($afterCloneScriptFileName) {
-            $this->afterCloneScriptFilePath = $this->shareScriptsDirPath
+            $this->afterCloneScriptPath = $this->shareScriptsDirPath
                 . '/' . $afterCloneScriptFileName;
 
-            if (!file_exists($this->afterCloneScriptFilePath)) {
+            if (!file_exists($this->afterCloneScriptPath)) {
                 throw new RuntimeException('The after clone script is not found');
             }
         }
 
-        if ($afterSwitchActiveSymlinkFileName) {
-            $this->afterSwitchActiveSymlinkFilePath = $this->shareScriptsDirPath
-                . '/' . $afterSwitchActiveSymlinkFileName;
+        if ($afterSwitchActiveReleaseFileName) {
+            $this->afterSwitchActiveReleaseScriptPath = $this->shareScriptsDirPath
+                . '/' . $afterSwitchActiveReleaseFileName;
 
-            if (!file_exists($this->afterSwitchActiveSymlinkFilePath)) {
+            if (!file_exists($this->afterSwitchActiveReleaseScriptPath)) {
                 throw new RuntimeException('The after switch active symlink script is not found');
             }
         }
     }
 
-    public function getBuildDirName(): string
+    public function getReleaseDirName(): string
     {
-        return $this->buildDirName;
+        return $this->releaseDirName;
     }
 
     public function getReleaseDirPath(): string
@@ -71,8 +71,8 @@ class BuildExecutor
 
     public function init(): void
     {
-        $this->buildDirName      = 'build_' . (new DateTime())->format('Ymd_His') . '_' . uniqid();
-        $this->releaseDirPath    = rtrim($this->buildDirPath, '/') . '/' . $this->buildDirName;
+        $this->releaseDirName    = 'release_' . (new DateTime())->format('Ymd_His') . '_' . uniqid();
+        $this->releaseDirPath    = rtrim($this->releasesDirPath, '/') . '/' . $this->releaseDirName;
         $this->releaseAppDirPath = $this->releaseDirPath . '/app';
 
         mkdir($this->releaseDirPath);
@@ -81,10 +81,10 @@ class BuildExecutor
         $this->inited = true;
     }
 
-    public function build(string $repository, string $branch): void
+    public function release(string $repository, string $branch): void
     {
         if (!$this->inited) {
-            throw new RuntimeException('The build executor is not initialized');
+            throw new RuntimeException('The releaser is not initialized');
         }
 
         $this->clone($repository, $branch);
@@ -135,35 +135,35 @@ class BuildExecutor
     {
         $this->logger->alert('Running after clone scripts...');
 
-        if (!$this->afterCloneScriptFilePath) {
+        if (!$this->afterCloneScriptPath) {
             $this->logger->warn('After clone script is not provided');
 
             return;
         }
 
-        $this->logger->info("Path [$this->afterCloneScriptFilePath]");
+        $this->logger->info("Path [$this->afterCloneScriptPath]");
 
-        $this->exec("sh $this->afterCloneScriptFilePath");
+        $this->exec("sh $this->afterCloneScriptPath");
     }
 
     private function replaceActiveLink(): void
     {
-        $this->createSymlink($this->releaseAppDirPath, $this->activeBuildLinkFullPath);
+        $this->createSymlink($this->releaseAppDirPath, $this->activeReleaseLinkPath);
     }
 
     private function runAfterSwitchActiveSymlinkScript(): void
     {
         $this->logger->alert('Running after switch active symlink scripts...');
 
-        if (!$this->afterSwitchActiveSymlinkFilePath) {
+        if (!$this->afterSwitchActiveReleaseScriptPath) {
             $this->logger->warn('After switch active symlink script is not provided');
 
             return;
         }
 
-        $this->logger->info("Path [$this->afterSwitchActiveSymlinkFilePath]");
+        $this->logger->info("Path [$this->afterSwitchActiveReleaseScriptPath]");
 
-        $this->exec("sh $this->afterSwitchActiveSymlinkFilePath");
+        $this->exec("sh $this->afterSwitchActiveReleaseScriptPath");
     }
 
     private function exec(string $command): void
@@ -263,20 +263,20 @@ class BuildExecutor
     private function saveState(): void
     {
         $stateData = [
-            'time'                             => (new DateTime())->format('Y-m-d H:i:s.u'),
-            'releaseDirPath'                   => $this->releaseDirPath,
-            'buildDirName'                     => $this->buildDirName,
-            'releaseAppDirPath'                => $this->releaseAppDirPath,
-            'activeBuildLinkFullPath'          => $this->activeBuildLinkFullPath,
-            'shareLinksDirPath'                => $this->shareLinksDirPath,
-            'shareScriptsDirPath'              => $this->shareScriptsDirPath,
-            'afterCloneScriptFileName'         => $this->afterCloneScriptFilePath
-                ? file_get_contents($this->afterCloneScriptFilePath)
+            'time'                     => (new DateTime())->format('Y-m-d H:i:s.u'),
+            'releaseDirPath'           => $this->releaseDirPath,
+            'releaseDirName'           => $this->releaseDirName,
+            'releaseAppDirPath'        => $this->releaseAppDirPath,
+            'activeReleaseLinkPath'    => $this->activeReleaseLinkPath,
+            'shareLinksDirPath'        => $this->shareLinksDirPath,
+            'shareScriptsDirPath'      => $this->shareScriptsDirPath,
+            'afterCloneScript'         => $this->afterCloneScriptPath
+                ? file_get_contents($this->afterCloneScriptPath)
                 : null,
-            'afterSwitchActiveSymlinkFileName' => $this->afterSwitchActiveSymlinkFilePath
-                ? file_get_contents($this->afterSwitchActiveSymlinkFilePath)
+            'afterSwitchActiveSymlink' => $this->afterSwitchActiveReleaseScriptPath
+                ? file_get_contents($this->afterSwitchActiveReleaseScriptPath)
                 : null,
-            'buildDirPath'                     => $this->buildDirPath,
+            'releasesDirPath'          => $this->releasesDirPath,
         ];
 
         file_put_contents(
@@ -285,7 +285,7 @@ class BuildExecutor
         );
 
         file_put_contents(
-            $this->buildDirPath . '/current-state.json',
+            $this->releasesDirPath . '/current-state.json',
             json_encode($stateData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
         );
     }

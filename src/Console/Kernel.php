@@ -4,7 +4,7 @@ namespace PhpDeployer\Console;
 
 use PhpDeployer\Console\Commands\DeployCommand;
 use PhpDeployer\Enum\ExitStatusCodeEnum;
-use PhpDeployer\Helpers\BuildExecutor;
+use PhpDeployer\Helpers\Releaser;
 use PhpDeployer\Helpers\EnvReader;
 use PhpDeployer\Helpers\Logger;
 
@@ -42,14 +42,14 @@ readonly class Kernel
                 logger: $this->logger,
                 repository: $env['REPOSITORY'] ?? '',
                 branch: $env['BRANCH'] ?? '',
-                buildExecutor: new BuildExecutor(
+                releaser: new Releaser(
                     shareLinksDirPath: $this->baseDir . '/share/links',
                     shareScriptsDirPath: $this->baseDir . '/share/scripts',
                     afterCloneScriptFileName: $env['SCRIPT_NAME_AFTER_CLONE'] ?? '',
-                    afterSwitchActiveSymlinkFileName: $env['SCRIPT_NAME_AFTER_SWITCH_ACTIVE_SYMLINK'] ?? '',
-                    activeBuildLinkFullPath: $this->baseDir . '/build/active_build',
+                    afterSwitchActiveReleaseFileName: $env['SCRIPT_NAME_AFTER_SWITCH_ACTIVE_SYMLINK'] ?? '',
+                    activeReleaseLinkPath: $env['ACTIVE_RELEASE_SYMLINK_FULL_PATH'] ?? '',
                     logger: $this->logger,
-                    buildDirPath: $this->baseDir . '/build',
+                    releasesDirPath: $this->baseDir . '/releases',
                 )
             );
 
