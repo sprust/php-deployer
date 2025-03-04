@@ -43,7 +43,7 @@ readonly class Kernel
                 repository: $env['REPOSITORY'] ?? '',
                 branch: $env['BRANCH'] ?? '',
                 releaser: new Releaser(
-                    shareLinksDirPath: $this->baseDir . '/share/links',
+                    shareLinkableDirPath: $this->baseDir . '/share/linkable',
                     shareScriptsDirPath: $this->baseDir . '/share/scripts',
                     afterCloneScriptFileName: $env['SCRIPT_NAME_AFTER_CLONE'] ?? '',
                     afterSwitchActiveReleaseFileName: $env['SCRIPT_NAME_AFTER_SWITCH_ACTIVE_SYMLINK'] ?? '',

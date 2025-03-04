@@ -4,7 +4,7 @@
 !.gitkeep
 /logs/*.log
 /releases/*
-/share/links/*
+/share/linkable/*
 /share/scripts/*
 
 /vendor/

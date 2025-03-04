@@ -20,7 +20,7 @@ class Releaser
     private string $afterSwitchActiveReleaseScriptPath = '';
 
     public function __construct(
-        private readonly string $shareLinksDirPath,
+        private readonly string $shareLinkableDirPath,
         private readonly string $shareScriptsDirPath,
         string $afterCloneScriptFileName,
         string $afterSwitchActiveReleaseFileName,
@@ -28,7 +28,7 @@ class Releaser
         private readonly Logger $logger,
         private readonly string $releasesDirPath
     ) {
-        if (!is_dir($this->shareLinksDirPath)) {
+        if (!is_dir($this->shareLinkableDirPath)) {
             throw new RuntimeException('The share links directory is not found');
         }
 
@@ -107,10 +107,10 @@ class Releaser
     {
         $this->logger->alert('Generating share symlinks...');
 
-        $paths = $this->getFileAndDirPathsRecursive($this->shareLinksDirPath);
+        $paths = $this->getFileAndDirPathsRecursive($this->shareLinkableDirPath);
 
         foreach ($paths as $path) {
-            $source = "$this->shareLinksDirPath/$path";
+            $source = "$this->shareLinkableDirPath/$path";
             $target = "$this->releaseAppDirPath/$path";
 
             if (file_exists($target)) {
@@ -268,7 +268,7 @@ class Releaser
             'releaseDirName'           => $this->releaseDirName,
             'releaseAppDirPath'        => $this->releaseAppDirPath,
             'activeReleaseLinkPath'    => $this->activeReleaseLinkPath,
-            'shareLinksDirPath'        => $this->shareLinksDirPath,
+            'shareLinkableDirPath'     => $this->shareLinkableDirPath,
             'shareScriptsDirPath'      => $this->shareScriptsDirPath,
             'afterCloneScript'         => $this->afterCloneScriptPath
                 ? file_get_contents($this->afterCloneScriptPath)
