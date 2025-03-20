@@ -3,8 +3,8 @@
 namespace PhpDeployer\Console\Commands;
 
 use PhpDeployer\Enum\ExitStatusCodeEnum;
-use PhpDeployer\Helpers\Releaser;
-use PhpDeployer\Helpers\Logger;
+use PhpDeployer\Services\Logger;
+use PhpDeployer\Services\Releaser;
 use RuntimeException;
 
 readonly class DeployCommand

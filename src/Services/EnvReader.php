@@ -1,6 +1,6 @@
 <?php
 
-namespace PhpDeployer\Helpers;
+namespace PhpDeployer\Services;
 
 use RuntimeException;
 

@@ -4,17 +4,17 @@ namespace PhpDeployer\Console;
 
 use PhpDeployer\Console\Commands\DeployCommand;
 use PhpDeployer\Enum\ExitStatusCodeEnum;
-use PhpDeployer\Helpers\Releaser;
-use PhpDeployer\Helpers\EnvReader;
-use PhpDeployer\Helpers\Logger;
-use Throwable;
+use PhpDeployer\Services\EnvReader;
+use PhpDeployer\Services\Logger;
+use PhpDeployer\Services\ProcessExecutor;
+use PhpDeployer\Services\Releaser;
+use PhpDeployer\Services\ShareScripts;
 
 readonly class Kernel
 {
     private string $baseDir;
 
     private Logger $logger;
-    private EnvReader $envReader;
 
     /**
      * @var array<string, string>
@@ -25,9 +25,8 @@ readonly class Kernel
     {
         $this->baseDir = rtrim($baseDir, '/');
 
-        $this->logger    = new Logger();
-        $this->envReader = new EnvReader($this->baseDir . '/.env');
-        $this->env       = $this->envReader->get();
+        $this->logger = new Logger();
+        $this->env    = (new EnvReader($this->baseDir . '/.env'))->get();
     }
 
     public function run(array $args): ExitStatusCodeEnum
@@ -79,15 +78,30 @@ readonly class Kernel
 
     private function getReleaser(bool $isTest): Releaser
     {
+        $processExecutor = $this->getProcessExecutor();
+
         return new Releaser(
             isTest: $isTest,
-            shareLinkableDirPath: $this->baseDir . '/share/linkable',
-            shareScriptsDirPath: $this->baseDir . '/share/scripts',
-            afterCloneScriptFileName: $this->env['SCRIPT_NAME_AFTER_CLONE'] ?? '',
-            afterSwitchActiveReleaseFileName: $this->env['SCRIPT_NAME_AFTER_SWITCH_ACTIVE_SYMLINK'] ?? '',
-            activeReleaseLinkPath: $this->env['ACTIVE_RELEASE_SYMLINK_FULL_PATH'] ?? '',
+            shareScripts: new ShareScripts(
+                executor: $processExecutor,
+                logger: $this->logger,
+                shareScriptsDirPath: $this->baseDir . '/share/scripts',
+                prepareScriptFileName: $this->env['SCRIPT_NAME_PREPARE'] ?? null,
+                preReleaseFileName: $this->env['SCRIPT_NAME_PRERELEASE'] ?? null,
+                releasedFileName: $this->env['SCRIPT_NAME_RELEASED'] ?? null,
+            ),
+            processExecutor: $processExecutor,
             logger: $this->logger,
+            shareLinkableDirPath: $this->baseDir . '/share/linkable',
+            activeReleaseLinkPath: $this->env['ACTIVE_RELEASE_SYMLINK_FULL_PATH'] ?? '',
             releasesDirPath: $this->baseDir . '/releases',
+        );
+    }
+
+    private function getProcessExecutor(): ProcessExecutor
+    {
+        return new ProcessExecutor(
+            logger: $this->logger
         );
     }
 }

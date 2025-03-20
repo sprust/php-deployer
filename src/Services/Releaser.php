@@ -1,62 +1,36 @@
 <?php
 
-namespace PhpDeployer\Helpers;
+namespace PhpDeployer\Services;
 
 use DateTime;
 use FilesystemIterator;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use RuntimeException;
-use Symfony\Component\Process\Process;
 
 class Releaser
 {
-    private bool $inited = false;
+    private bool $initialized = false;
 
     private string $releaseDirPath = '';
     private string $releaseDirName = '';
     private string $releaseAppDirPath = '';
-    private string $afterCloneScriptPath = '';
-    private string $afterSwitchActiveReleaseScriptPath = '';
 
     public function __construct(
         private readonly bool $isTest,
-        private readonly string $shareLinkableDirPath,
-        private readonly string $shareScriptsDirPath,
-        string $afterCloneScriptFileName,
-        string $afterSwitchActiveReleaseFileName,
-        private readonly string $activeReleaseLinkPath,
+        private readonly ShareScripts $shareScripts,
+        private readonly ProcessExecutor $processExecutor,
         private readonly Logger $logger,
+        private readonly string $shareLinkableDirPath,
+        private readonly string $activeReleaseLinkPath,
         private readonly string $releasesDirPath
     ) {
         if (!is_dir($this->shareLinkableDirPath)) {
             throw new RuntimeException('The share links directory is not found');
         }
 
-        if (!is_dir($this->shareScriptsDirPath)) {
-            throw new RuntimeException('The share scripts directory is not found');
-        }
-
         if (!is_dir($this->releasesDirPath)) {
             throw new RuntimeException('The releases directory is not found');
-        }
-
-        if ($afterCloneScriptFileName) {
-            $this->afterCloneScriptPath = $this->shareScriptsDirPath
-                . '/' . $afterCloneScriptFileName;
-
-            if (!file_exists($this->afterCloneScriptPath)) {
-                throw new RuntimeException('The after clone script is not found');
-            }
-        }
-
-        if ($afterSwitchActiveReleaseFileName) {
-            $this->afterSwitchActiveReleaseScriptPath = $this->shareScriptsDirPath
-                . '/' . $afterSwitchActiveReleaseFileName;
-
-            if (!file_exists($this->afterSwitchActiveReleaseScriptPath)) {
-                throw new RuntimeException('The after switch active symlink script is not found');
-            }
         }
     }
 
@@ -85,12 +59,12 @@ class Releaser
         mkdir($this->releaseDirPath);
         mkdir($this->releaseAppDirPath);
 
-        $this->inited = true;
+        $this->initialized = true;
     }
 
     public function release(string $repository, string $branch): void
     {
-        if (!$this->inited) {
+        if (!$this->initialized) {
             throw new RuntimeException('The releaser is not initialized');
         }
 
@@ -98,9 +72,24 @@ class Releaser
         $this->generateShareSymlinks();
 
         if (!$this->isTest) {
-            $this->runAfterCloneScript();
-            $this->replaceActiveLink();
-            $this->runAfterSwitchActiveSymlinkScript();
+            $this->shareScripts->runPrepareScript(
+                workingDir: $this->releaseAppDirPath
+            );
+
+            if (file_exists($this->activeReleaseLinkPath)) {
+                $this->shareScripts->runPreReleaseScript(
+                    workingDir: $this->activeReleaseLinkPath
+                );
+            }
+
+            $this->createSymlink(
+                source: $this->releaseAppDirPath,
+                target: $this->activeReleaseLinkPath
+            );
+
+            $this->shareScripts->runReleasedScript(
+                workingDir: $this->activeReleaseLinkPath
+            );
         }
 
         $this->saveState();
@@ -110,7 +99,10 @@ class Releaser
     {
         $this->logger->alert('Cloning repository...');
 
-        $this->exec("git clone --branch $branch $repository .");
+        $this->processExecutor->exec(
+            workingDir: $this->releaseAppDirPath,
+            command: "git clone --branch $branch $repository ."
+        );
     }
 
     private function generateShareSymlinks(): void
@@ -141,83 +133,14 @@ class Releaser
         }
     }
 
-    private function runAfterCloneScript(): void
-    {
-        $this->logger->alert('Running after clone scripts...');
-
-        if (!$this->afterCloneScriptPath) {
-            $this->logger->warn('After clone script is not provided');
-
-            return;
-        }
-
-        $this->logger->info(file_get_contents($this->afterCloneScriptPath));
-
-        $this->exec("sh $this->afterCloneScriptPath");
-    }
-
-    private function replaceActiveLink(): void
-    {
-        $this->createSymlink($this->releaseAppDirPath, $this->activeReleaseLinkPath);
-    }
-
-    private function runAfterSwitchActiveSymlinkScript(): void
-    {
-        $this->logger->alert('Running after switch active symlink scripts...');
-
-        if (!$this->afterSwitchActiveReleaseScriptPath) {
-            $this->logger->warn('After switch active symlink script is not provided');
-
-            return;
-        }
-
-        $this->logger->info(file_get_contents($this->afterSwitchActiveReleaseScriptPath));
-
-        $this->exec("sh $this->afterSwitchActiveReleaseScriptPath");
-    }
-
-    private function exec(string $command): void
-    {
-        $process = Process::fromShellCommandline($command)
-            ->setWorkingDirectory($this->releaseAppDirPath)
-            ->setTimeout(null);
-
-        $process->start();
-
-        while ($process->isRunning()) {
-            $this->logProcess($process);
-
-            sleep(1);
-        }
-
-        $this->logProcess($process);
-
-        if (!$process->isSuccessful()) {
-            throw new RuntimeException('Command failed');
-        }
-
-        $this->logger->info('--> command executed successfully');
-    }
-
     private function createSymlink(string $source, string $target): void
     {
         $this->logger->info("Creating symlink: $source -> $target");
 
-        $this->exec("ln -sfn $source $target");
-    }
-
-    private function logProcess(Process $process): void
-    {
-        if ($output = trim($process->getOutput())) {
-            $this->logger->proc($output);
-        }
-
-        if ($errorOutput = trim($process->getErrorOutput())) {
-            $this->logger->proc($errorOutput);
-        }
-
-        $process->clearOutput();
-        $process->clearErrorOutput();
+        $this->processExecutor->exec(
+            workingDir: $this->releaseAppDirPath,
+            command: "ln -sfn $source $target"
+        );
     }
 
     private function getFileAndDirPathsRecursive(string $linksDirPath): array
@@ -274,20 +197,19 @@ class Releaser
     private function saveState(): void
     {
         $stateData = [
-            'time'                     => (new DateTime())->format('Y-m-d H:i:s.u'),
-            'releaseDirPath'           => $this->releaseDirPath,
-            'releaseDirName'           => $this->releaseDirName,
-            'releaseAppDirPath'        => $this->releaseAppDirPath,
-            'activeReleaseLinkPath'    => $this->activeReleaseLinkPath,
-            'shareLinkableDirPath'     => $this->shareLinkableDirPath,
-            'shareScriptsDirPath'      => $this->shareScriptsDirPath,
-            'afterCloneScript'         => $this->afterCloneScriptPath
-                ? file_get_contents($this->afterCloneScriptPath)
-                : null,
-            'afterSwitchActiveSymlink' => $this->afterSwitchActiveReleaseScriptPath
-                ? file_get_contents($this->afterSwitchActiveReleaseScriptPath)
-                : null,
-            'releasesDirPath'          => $this->releasesDirPath,
+            'time'                  => (new DateTime())->format('Y-m-d H:i:s.u'),
+            'releaseDirPath'        => $this->releaseDirPath,
+            'releaseDirName'        => $this->releaseDirName,
+            'releaseAppDirPath'     => $this->releaseAppDirPath,
+            'activeReleaseLinkPath' => $this->activeReleaseLinkPath,
+            'shareLinkableDirPath'  => $this->shareLinkableDirPath,
+            'shareScripts'          => [
+                'dirPath'          => $this->shareScripts->getShareScriptsDirPath(),
+                'prepareScript'    => $this->shareScripts->getPrepareScriptContent(),
+                'preReleaseScript' => $this->shareScripts->getPreReleaseScriptContent(),
+                'releasedScript'   => $this->shareScripts->getReleasedScriptContent(),
+            ],
+            'releasesDirPath'       => $this->releasesDirPath,
         ];
 
         file_put_contents(
