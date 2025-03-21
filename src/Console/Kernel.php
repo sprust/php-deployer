@@ -9,6 +9,7 @@ use PhpDeployer\Services\Logger;
 use PhpDeployer\Services\ProcessExecutor;
 use PhpDeployer\Services\Releaser;
 use PhpDeployer\Services\ShareScripts;
+use PhpDeployer\Services\SymLinker;
 
 readonly class Kernel
 {
@@ -89,6 +90,12 @@ readonly class Kernel
                 prepareScriptFileName: $this->env['SCRIPT_NAME_PREPARE'] ?? null,
                 preReleaseFileName: $this->env['SCRIPT_NAME_PRERELEASE'] ?? null,
                 releasedFileName: $this->env['SCRIPT_NAME_RELEASED'] ?? null,
+            ),
+            symLinker: new SymLinker(
+                processExecutor: $processExecutor,
+                logger: $this->logger,
+                linkableDir: $this->baseDir . '/share/linkable',
+                symlinksFilePath: $this->baseDir . '/symlinks.json',
             ),
             processExecutor: $processExecutor,
             logger: $this->logger,

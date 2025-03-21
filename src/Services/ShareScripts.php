@@ -40,7 +40,9 @@ readonly class ShareScripts
                 . '/' . $preReleaseFileName;
 
             if (!file_exists($this->preReleaseScriptPath)) {
-                throw new RuntimeException('The pre-release script is not found');
+                throw new RuntimeException(
+                    "The pre-release script is not found by $this->preReleaseScriptPath"
+                );
             }
         }
 

@@ -3,9 +3,6 @@
 namespace PhpDeployer\Services;
 
 use DateTime;
-use FilesystemIterator;
-use RecursiveDirectoryIterator;
-use RecursiveIteratorIterator;
 use RuntimeException;
 
 class Releaser
@@ -19,6 +16,7 @@ class Releaser
     public function __construct(
         private readonly bool $isTest,
         private readonly ShareScripts $shareScripts,
+        private readonly SymLinker $symLinker,
         private readonly ProcessExecutor $processExecutor,
         private readonly Logger $logger,
         private readonly string $shareLinkableDirPath,
@@ -69,7 +67,8 @@ class Releaser
         }
 
         $this->clone($repository, $branch);
-        $this->generateShareSymlinks();
+
+        $this->symLinker->create($this->releaseAppDirPath);
 
         if (!$this->isTest) {
             $this->shareScripts->runPrepareScript(
@@ -105,34 +104,6 @@ class Releaser
         );
     }
 
-    private function generateShareSymlinks(): void
-    {
-        $this->logger->alert('Generating share symlinks...');
-
-        $paths = $this->getFileAndDirPathsRecursive($this->shareLinkableDirPath);
-
-        foreach ($paths as $path) {
-            $source = "$this->shareLinkableDirPath/$path";
-            $target = "$this->releaseAppDirPath/$path";
-
-            if (file_exists($target)) {
-                $this->logger->warn("The target path already exists: $target");
-
-                if (is_dir($target)) {
-                    $this->logger->warn("Removing the directory: $target");
-
-                    $this->deleteDirRecursive($target);
-                } else {
-                    $this->logger->warn("Removing the file: $target");
-
-                    unlink($target);
-                }
-            }
-
-            $this->createSymlink($source, $target);
-        }
-    }
-
     private function createSymlink(string $source, string $target): void
     {
         $this->logger->info("Creating symlink: $source -> $target");
@@ -141,57 +112,6 @@ class Releaser
             workingDir: $this->releaseAppDirPath,
             command: "ln -sfn $source $target"
         );
-    }
-
-    private function getFileAndDirPathsRecursive(string $linksDirPath): array
-    {
-        if (!is_dir($linksDirPath)) {
-            throw new RuntimeException("The provided path is not a directory");
-        }
-
-        $linksDirPathLen = strlen($linksDirPath);
-
-        $result = [];
-
-        $iterator = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator($linksDirPath, FilesystemIterator::SKIP_DOTS),
-            RecursiveIteratorIterator::SELF_FIRST
-        );
-
-        foreach ($iterator as $item) {
-            if ($item->getFileName() === '.gitkeep') {
-                continue;
-            }
-
-            if (!$item->isFile()
-                && iterator_count(new FilesystemIterator($item->getPathname())) !== 0
-            ) {
-                continue;
-            }
-
-            $result[] = substr($item->getPathname(), $linksDirPathLen + 1);
-        }
-
-        return $result;
-    }
-
-    private function deleteDirRecursive(string $dir): void
-    {
-        if (!is_dir($dir)) {
-            throw new RuntimeException("The provided path is not a directory");
-        }
-
-        $items = new FilesystemIterator($dir, FilesystemIterator::SKIP_DOTS);
-
-        foreach ($items as $item) {
-            if ($item->isDir()) {
-                $this->deleteDirRecursive($item->getPathname());
-            } else {
-                unlink($item->getPathname());
-            }
-        }
-
-        rmdir($dir);
     }
 
     private function saveState(): void
@@ -209,6 +129,7 @@ class Releaser
                 'preReleaseScript' => $this->shareScripts->getPreReleaseScriptContent(),
                 'releasedScript'   => $this->shareScripts->getReleasedScriptContent(),
             ],
+            'symlinks'              => $this->symLinker->getLinkablePaths(),
             'releasesDirPath'       => $this->releasesDirPath,
         ];
 

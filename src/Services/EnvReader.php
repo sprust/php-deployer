@@ -14,24 +14,30 @@ readonly class EnvReader
     public function __construct(private string $filePath)
     {
         if (!file_exists($this->filePath)) {
-            throw new RuntimeException('Environment file is not found');
+            throw new RuntimeException(
+                "Environment file is not found by $this->filePath"
+            );
         }
 
-        $env = file_get_contents($this->filePath);
+        $envData = explode("\n", file_get_contents($this->filePath));
 
-        $env = explode("\n", $env);
+        $env = [];
 
-        $env = array_filter($env, fn($line) => !empty($line));
+        foreach ($envData as $envString) {
+            if (!$envString || !str_contains($envString, '=')) {
+                continue;
+            }
 
-        if ($env === false) {
-            throw new RuntimeException('Environment file is empty');
+            [$key, $value] = explode('=', $envString);
+
+            if (str_starts_with($value, '#')) {
+                continue;
+            }
+
+            $env[$key] = $value;
         }
 
-        $env = array_map(fn($line) => explode('=', $line), $env);
-
-        $env = array_map(fn($line) => [$line[0], $line[1] ?? ''], $env);
-
-        $this->env = array_combine(array_column($env, 0), array_column($env, 1));
+        $this->env = $env;
     }
 
     /**
