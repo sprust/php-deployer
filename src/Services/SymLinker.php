@@ -59,6 +59,19 @@ readonly class SymLinker
         foreach ($this->linkablePaths as $linkableItem => $linkablePath) {
             $targetPath = rtrim($workingDirPath, '/') . '/' . $linkableItem;
 
+            if (file_exists($targetPath)) {
+                $this->logger->warn("Removing existing symlink: $targetPath");
+
+                if (is_file($targetPath)) {
+                    unlink($targetPath);
+                } else {
+                    $this->processExecutor->exec(
+                        workingDir: $workingDirPath,
+                        command: "rm -rf $targetPath"
+                    );
+                }
+            }
+
             $this->createSymlink(
                 workingDirPath: $workingDirPath,
                 source: $linkablePath,
