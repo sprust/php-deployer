@@ -59,7 +59,7 @@ readonly class Kernel
                 $this->logger->error('The deployment script is incorrect');
             }
 
-            return ExitStatusCodeEnum::SUCCESS;
+            return $result;
         }
 
         $this->logger->error("Unknown command: $command");
